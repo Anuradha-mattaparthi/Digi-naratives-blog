@@ -1,32 +1,49 @@
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Editor from "react-simple-wysiwyg";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+const EditBlog = () => {
+  const [blog, setBlog] = useState([]);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm();
 
-const CreateBlog = () => {
-  const [html, setHtml] = useState('');
-
-  const [imageId,setImageId] = useState('');
-
+  const params = useParams();
+  const [html, setHtml] = useState("");
+  const [imageId, setImageId] = useState("");
   const navigate = useNavigate();
-  
   function onChange(e) {
     setHtml(e.target.value);
   }
-  
+
+  useEffect(() => {
+    fetchBlog();
+  }, []);
+
+  const fetchBlog = async () => {
+    const res = await fetch("http://localhost:8000/api/blogs/" + params.id);
+    const result = await res.json();
+    setBlog(result.data);
+    setHtml(result.data.description);
+    reset(result.data);
+  };
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     const formData = new FormData();
     formData.append("image", file);
-  
+
     try {
       const res = await fetch("http://127.0.0.1:8000/api/image/", {
-        method: 'POST',
-        body: formData
+        method: "POST",
+        body: formData,
       });
       const result = await res.json();
-  
+
       if (result.status === false) {
         alert(result.errors.image);
         e.target.value = null;
@@ -39,35 +56,30 @@ const CreateBlog = () => {
       console.error("Error uploading image:", error);
     }
   };
-  
-  
-  
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm();
 
   const formSubmit = async (data) => {
-    const newData = { ...data, "description" : html,image_id:imageId}
-    const res = await fetch("http://127.0.0.1:8000/api/blogs",{
-      method: "POST",
-      headers: {
-        'content-type' : 'application/json'
-      },
-      body :JSON.stringify(newData)
-    });
+    const newData = { ...data, description: html, image_id: imageId };
+    const res = await fetch(
+      "http://127.0.0.1:8000/api/blogs/"+ params.id,
+      {
+        method: "PUT",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(newData),
+      }
+    );
 
-    toast("Blog added successfully");
+    toast("Blog updated successfully");
 
-    navigate('/blogs');
-    //console.log(newData);
-  }
+    navigate("/blogs");
+    console.log(newData);
+  };
 
   return (
     <div className="container">
       <div className="d-flex justify-content-between pt-3 mb-4">
-        <h2>Create Blog</h2>
+        <h2>Update Blog</h2>
         <a href="/blogs" className="btn btn-info text-white">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -124,7 +136,16 @@ const CreateBlog = () => {
             </div>
             <div className="mb-3">
               <label className="form-label">Image</label>
-              <input onChange={handleFileChange} type="file" className="form-control" placeholder="" />
+              <input
+                onChange={handleFileChange}
+                type="file"
+                className="form-control"
+                placeholder=""
+              />
+              <div className="text-center">{
+            (blog.image) && <img className='w-30 mt-3 img-fluid'  src={`http://localhost:8000/uploads/blogsimages/`+blog.image}/>
+        }</div>
+              
             </div>
             <div className="mb-3">
               <label htmlFor="author" className="form-label">
@@ -140,7 +161,7 @@ const CreateBlog = () => {
                 <p className="invalid-feedback">This field is required</p>
               )}
             </div>
-            <button className="btn btn-primary">Create</button>
+            <button className="btn btn-primary">Update</button>
           </div>
         </form>
       </div>
@@ -148,4 +169,4 @@ const CreateBlog = () => {
   );
 };
 
-export default CreateBlog;
+export default EditBlog;
